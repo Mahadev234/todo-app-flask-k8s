@@ -1,0 +1,88 @@
+# Application Deployment
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: todo-app  # Name of the deployment
+spec:
+  replicas: 1  # Number of pod replicas
+  selector:
+    matchLabels:
+      app: todo-app  # Label selector to identify the pods
+  template:
+    metadata:
+      labels:
+        app: todo-app  # Labels to be applied to the pods
+    spec:
+      containers:
+        - name: app  # Name of the container
+          image: todo-app  # Docker image to use for the container
+          imagePullPolicy: Never  # Image pull policy
+          ports:
+            - containerPort: 5000  # Port exposed by the container
+          env:
+            - name: FLASK_APP
+              value: app  # Environment variable for Flask app
+            - name: POSTGRES_USER
+              value: postgres  # PostgreSQL user
+            - name: POSTGRES_PASSWORD
+              value: password  # PostgreSQL password
+            - name: POSTGRES_DB
+              value: todo_db  # PostgreSQL database name
+            - name: DATABASE_URL
+              value: postgresql://postgres:password@db:5432/todo_db  # Database connection URL
+---
+# Application Service
+apiVersion: v1
+kind: Service
+metadata:
+  name: todo-service
+spec:
+  selector:
+    app: todo-app
+  ports:
+    - protocol: TCP
+      port: 80
+      targetPort: 5000
+  type: LoadBalancer
+---
+# Database Deployment
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: postgres
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: postgres
+  template:
+    metadata:
+      labels:
+        app: postgres
+    spec:
+      containers:
+        - name: db
+          image: postgres:13
+          ports:
+            - containerPort: 5432
+          env:
+            - name: POSTGRES_USER
+              value: postgres
+            - name: POSTGRES_PASSWORD
+              value: password
+            - name: POSTGRES_DB
+              value: todo_db
+---
+# Database Service
+apiVersion: v1
+kind: Service
+metadata:
+  name: db
+spec:
+  selector:
+    app: postgres
+  ports:
+    - protocol: TCP
+      port: 5432
+      targetPort: 5432
+  type: ClusterIP
